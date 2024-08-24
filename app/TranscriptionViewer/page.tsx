@@ -1,7 +1,7 @@
 'use client'
-import Header from './Components/header'
+import Header from '../Components/header'
 
-export default function Home() {
+export default function TranscriptionViewer() {
 
   return (
     <div className="bg-white">
@@ -25,19 +25,12 @@ export default function Home() {
           </div>
           <div className="text-center">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-              Vocalytics
+              Transcription Viewer
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Your one stop shop for all your transcription needs.
+              Upload your audio or video file to view the transcription.
+              You can add comments and edit the transcription in real time.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <a
-                href="/TranscriptionViewer"
-                className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Transcribe Now
-              </a>
-            </div>
           </div>
         </div>
         <div
