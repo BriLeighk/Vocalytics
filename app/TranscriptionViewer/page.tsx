@@ -15,6 +15,7 @@ export default function TranscriptionViewer() {
   const [progress, setProgress] = useState<boolean>(false); // The progress of the transcription
   const [error, setError] = useState<string>(''); // The error message of the transcription
   const [isError, setIsError] = useState<boolean>(false); // The error message of the transcription
+  const [s3Url, setS3Url] = useState<string | null>(null); // The url of the s3 bucket
 
   // Function to handle when the user uploads a file
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -70,6 +71,9 @@ export default function TranscriptionViewer() {
       // uploads the file to the s3 bucket
       await s3Client.send(new PutObjectCommand(uploadParams));
 
+      // Set the S3 URL
+      setS3Url(`https://${uploadParams.Bucket}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${uploadParams.Key}`);
+
       // Clear the file input
       setFile(null);
       (document.querySelector('input[type="file"]') as HTMLInputElement).value = '';
@@ -110,6 +114,7 @@ export default function TranscriptionViewer() {
           
           // set progress to false to mark completion
           setProgress(false);
+          setTranscriptionStatus('Completed');
           
           // Fetch and display the transcription
           const transcriptionUrl = data.TranscriptionJob?.Transcript?.TranscriptFileUri;
@@ -158,6 +163,7 @@ export default function TranscriptionViewer() {
 
   return (
     <div className="bg-white">
+        {/* Fade in and out animation for the error message */}
         <style jsx>
             {`
                 .fade-in-out {
@@ -215,30 +221,48 @@ export default function TranscriptionViewer() {
               </div>
             )}
             {/* Display the status of the transcription */}
-            {!progress && (
+            {!progress && transcriptionStatus !== 'Completed' && (
               <p className="mt-4 text-lg leading-8 text-gray-600">
                 {transcriptionStatus}
               </p>
             )}
             {/* Display the transcription text if the transcription is completed */}
             {transcriptionText && (
-              <div className="mt-4 text-lg leading-8 text-gray-600 border-2 rounded shadow-lg shadow-gray-600">
+              <div className="mt-4 text-lg leading-8 text-gray-600">
+                
                 {/* Title of the transcription */}
                 <h2 className="text-2xl font-bold">Transcription:</h2>
-                {/* Display the transcription text */}
-                <div className="overflow-y-auto max-h-96 w-full whitespace-normal">
-                  {transcriptionSegments.reduce((acc, segment, index) => {
+                
+                {/* Embed the audio or video file */}
+                {s3Url && (
+                  <div className="mt-4">
+                    {s3Url.endsWith('.mp3') ? (
+                      <audio id="media" controls>
+                        <source src={s3Url} type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                      </audio>
+                    ) : (
+                      <video id="media" controls>
+                        <source src={s3Url} type="video/mp4" />
+                        Your browser does not support the video element.
+                      </video>
+                    )}
+                  </div>
+                )}
 
+                {/* Display the transcription text */}
+                <div className="overflow-y-auto max-h-96 w-full whitespace-normal border-2 border-blue-500 rounded shadow-lg shadow-gray-600 mt-4">
+                  {transcriptionSegments.reduce((acc, segment, index) => {
                     // Replace the new lines with spaces
                     const content = segment.alternatives[0].content.replace(/\n/g, ' ');
                     // display time stamp at 180 second intervals
-                    if (index === 0 || (index > 0 && parseFloat(segment.start_time) - parseFloat(transcriptionSegments[index - 1].start_time) >= 180)) {
-                        // TODO: link to segment of the audio/video preview
-                        acc.push(
+                    if (index === 0 || (index > 0 && parseFloat(segment.start_time) - parseFloat(transcriptionSegments[index - 1].start_time) >= 60)) {
+                      // TODO: link to segment of the audio/video preview
+                      acc.push(
                         <a href={`#`} onClick={() => {
-                          const audioElement = document.getElementById('audio') as HTMLAudioElement | null;
-                          if (audioElement) {
-                            audioElement.currentTime = parseFloat(segment.start_time);
+                          const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
+                          if (mediaElement) {
+                            mediaElement.currentTime = parseFloat(segment.start_time);
                           }
                         }}>
                           [{isNaN(parseFloat(segment.start_time)) ? 'Invalid time' : formatTime(parseFloat(segment.start_time))}]
