@@ -117,7 +117,7 @@ export default function Home() {
               Vocalytics
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Your one stop shop for all your transcription needs.
+              Transcribe, Annotate, Analyze.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <a
@@ -129,6 +129,57 @@ export default function Home() {
             </div>
           </div>
         </div>
+        <div className="flex items-center justify-between max-w-3xl mx-auto p-4">
+          <div className="flex-1 pr-8">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+              Your Audio, Insights, Made Easy.
+            </h2>
+            <br></br>
+            {/* temp solution - to be replaced */}
+            <p className="text-gray-600">
+              Effortlessly transcribe your mp3 or mp4 files, highlight key moments, and generate insightful summaries. With Vocalytics, you'll unlock the full potential of your audio and video content. Our intuitive interface and powerful AI technology make it a breeze to analyze, understand, and share your valuable recordings.
+            </p>
+          </div>
+          <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/2">
+            <img
+              src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
+              alt="Description of your image"
+              className="w-full h-auto rounded-lg shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between max-w-3xl mx-auto p-4">
+          <div className="flex-1 pr-8">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              How Does Vocalytics Work ?
+            </h2>
+            <br></br>
+            {/* temp solution - to be replaced */}
+            <p className="text-gray-600">
+              Step 1: Upload Your File: Choose an mp3 or mp4 file from your device.
+              <br />
+              Step 2: Transcribe Instantly: Our powerful AI engine will quickly generate a detailed transcript.
+              <br />
+              Step 3: Annotate and Comment: Highlight sections and add your thoughts or questions.
+              <br />
+              Step 4: Generate Summary: Let our AI summarize the key points and insights.
+              <br />
+            </p>
+          </div>
+          <div className="mt-10 flex items-center justify-center gap-x-6">
+              <a
+                href="#"
+                className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                Try Vocalytics for free today ! 
+              </a>
+            </div>
+          
+        </div>
+
+
+
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]"
