@@ -1,12 +1,23 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const navigation = [
   { name: 'Sign Up', href: '#' },
   { name: 'Transcript Viewer', href: '#' },
 ]
+
+function App() {
+  useEffect(() => {
+    AOS.init();
+    AOS.refresh();
+  }, []);
+
+  // Rest of your App component
+}
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -141,6 +152,26 @@ export default function Home() {
             </p>
           </div>
           <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/2">
+            <img
+              src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
+              alt="Description of your image"
+              className="w-full h-auto rounded-lg shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between max-w-3xl mx-auto p-4">
+          <div className="flex-1 pr-8">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+              Your Audio, Insights, Made Easy.
+            </h2>
+            <br></br>
+            {/* temp solution - to be replaced */}
+            <p className="text-gray-600">
+              Effortlessly transcribe your mp3 or mp4 files, highlight key moments, and generate insightful summaries. With Vocalytics, you'll unlock the full potential of your audio and video content. Our intuitive interface and powerful AI technology make it a breeze to analyze, understand, and share your valuable recordings.
+            </p>
+          </div>
+          <div data-aos="fade-right" className="w-full sm:w-1/2 md:w-1/3 lg:w-1/2">
             <img
               src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
               alt="Description of your image"
