@@ -16,6 +16,7 @@ export default function TranscriptionViewer() {
   const [error, setError] = useState<string>(''); // The error message of the transcription
   const [isError, setIsError] = useState<boolean>(false); // The error message of the transcription
   const [s3Url, setS3Url] = useState<string | null>(null); // The url of the s3 bucket
+  const [highlightedSegment, setHighlightedSegment] = useState<number | null>(null); // The currently highlighted segment
 
   // Function to handle when the user uploads a file
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -160,6 +161,30 @@ export default function TranscriptionViewer() {
     return date.toISOString().substr(11, 8);
   };
 
+  useEffect(() => {
+    const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
+    if (mediaElement) {
+      const handleTimeUpdate = () => {
+        const currentTime = mediaElement.currentTime;
+        const segment = transcriptionSegments.find((seg, idx) => {
+          const nextSeg = transcriptionSegments[idx + 1];
+          return parseFloat(seg.start_time) <= currentTime && (!nextSeg || parseFloat(nextSeg.start_time) > currentTime);
+        });
+        if (segment) {
+          const segmentIndex = transcriptionSegments.indexOf(segment);
+          setHighlightedSegment(segmentIndex);
+          const segmentElement = document.getElementById(`segment-${segmentIndex}`);
+          if (segmentElement) {
+            segmentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      };
+      mediaElement.addEventListener('timeupdate', handleTimeUpdate);
+      return () => {
+        mediaElement.removeEventListener('timeupdate', handleTimeUpdate);
+      };
+    }
+  }, [transcriptionSegments]);
 
   return (
     <div className="bg-white">
@@ -175,6 +200,10 @@ export default function TranscriptionViewer() {
                     10% { opacity: 1; }
                     90% { opacity: 1; }
                     100% { opacity: 0; }
+                }
+
+                .highlight {
+                    background-color: yellow;
                 }
             `}
         </style>
@@ -255,11 +284,10 @@ export default function TranscriptionViewer() {
                   {transcriptionSegments.reduce((acc, segment, index) => {
                     // Replace the new lines with spaces
                     const content = segment.alternatives[0].content.replace(/\n/g, ' ');
-                    // display time stamp at 180 second intervals
+                    // display time stamp at 60 second intervals
                     if (index === 0 || (index > 0 && parseFloat(segment.start_time) - parseFloat(transcriptionSegments[index - 1].start_time) >= 60)) {
-                      // TODO: link to segment of the audio/video preview
                       acc.push(
-                        <a href={`#`} onClick={() => {
+                        <a href={`#segment-${index}`} onClick={() => {
                           const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
                           if (mediaElement) {
                             mediaElement.currentTime = parseFloat(segment.start_time);
@@ -269,7 +297,11 @@ export default function TranscriptionViewer() {
                         </a>
                       );
                     }
-                    acc.push(content + ' ');
+                    acc.push(
+                      <span id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
+                        {content + ' '}
+                      </span>
+                    );
                     if (content.endsWith('.') || content.endsWith('!') || content.endsWith('?')) {
                       acc.push(<br />);
                     }
