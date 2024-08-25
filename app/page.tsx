@@ -1,9 +1,21 @@
 'use client'
 import Header from './Components/header'
 import Image from 'next/image'
+import "aos/dist/aos.css";
+import { useEffect } from 'react';
+import AOS from 'aos';
+
+
 
 
 export default function Home() {
+  useEffect(() => {
+    AOS.init({
+
+      duration: 1000, // Set duration to 2000ms (2 seconds)
+
+    });
+  }, []);
   return (
     <div className="bg-white">
       <Header />
@@ -23,7 +35,7 @@ export default function Home() {
         </div>
         <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
           <div className="hidden sm:mb-8 sm:flex sm:justify-center"></div>
-          <div className="text-center">
+          <div className="text-center" data-aos="fade-up">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
               Vocalytics
             </h1>
@@ -56,6 +68,7 @@ export default function Home() {
               src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
               alt="Description of your image"
               className="w-full h-auto rounded-lg shadow-md"
+              data-aos="fade-left"
               width={500}
               height={300}
             />
