@@ -3,9 +3,11 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { S3Client, PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { TranscribeClient, StartTranscriptionJobCommand, StartTranscriptionJobCommandInput, GetTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
+import { DynamoDBClient, PutItemCommand, GetItemCommand, UpdateItemCommand, DeleteItemCommand, AttributeValue } from '@aws-sdk/client-dynamodb';
 import Header from '../Components/header';
 import dotenv from 'dotenv'; // Load environment variables from .env file
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import userpool from '../../userpool';
 dotenv.config();
 
 export default function TranscriptionViewer() {
@@ -24,6 +26,17 @@ export default function TranscriptionViewer() {
   const [currentComment, setCurrentComment] = useState<string>(''); // Current comment text
   const [selectionCoords, setSelectionCoords] = useState<{ x: number, y: number } | null>(null); // Coordinates of the selected text
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    const user = userpool.getCurrentUser();
+    if (user) {
+      setIsLoggedIn(true);
+      setUsername(user.getUsername());
+    }
+  }, []);
+
   // Function to handle when the user uploads a file
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
     if (event.target.files && event.target.files.length > 0) {
@@ -33,6 +46,17 @@ export default function TranscriptionViewer() {
 
   // Function to handle when the user clicks the upload button
   const handleUpload = async () => {
+    // Check if the user is logged in
+    if (!isLoggedIn) {
+      setIsError(true);
+      setError('You must be logged in to upload a file.');
+      setTimeout(() => {
+        setIsError(false);
+        setError('');
+      }, 3000); // Hide error after 3 seconds
+      return;
+    }
+
     // checks if the file is of mp3 or mp4 format. Returns a popup error message if not
     if (file && (file.type !== 'audio/mpeg' && file.type !== 'video/mp4')) {
         setIsError(true);
@@ -132,9 +156,30 @@ export default function TranscriptionViewer() {
 
               setTranscriptionText(transcriptionData.results.transcripts[0].transcript);
               setTranscriptionSegments(transcriptionData.results.items);
+
+              // Store transcription in DynamoDB
+              const dynamoDBClient = new DynamoDBClient({
+                region: process.env.NEXT_PUBLIC_AWS_REGION,
+                credentials: {
+                  accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+                  secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+                },
+              });
+
+              const putItemParams = {
+                TableName: 'vocalytics-dbms',
+                Item: {
+                  TranscriptID: { S: params.TranscriptionJobName },
+                  TranscriptText: { S: transcriptionData.results.transcripts[0].transcript },
+                  Segments: { S: JSON.stringify(transcriptionData.results.items) },
+                  CreationDate: { S: new Date().toISOString() },
+                  Username: { S: username! }, // Store the username
+                } as Record<string, AttributeValue>,
+              };
+              await dynamoDBClient.send(new PutItemCommand(putItemParams));
             } catch (error) {
-              console.error('Error fetching transcription:', error);
-              setTranscriptionStatus('Error fetching transcription.');
+              console.error('Error storing transcription:', error);
+              setTranscriptionStatus('Error storing transcription.');
             }
           } else {
             setTranscriptionStatus('Transcription URL is unavailable.');
@@ -199,6 +244,38 @@ export default function TranscriptionViewer() {
     }
   }, [transcriptionSegments]);
 
+  const handleCommentSubmit = async () => {
+    if (selectedText && currentComment) {
+      const tempSelectedText = selectedText; // Store the selected text temporarily
+      setComments({ ...comments, [tempSelectedText]: currentComment });
+      setShowCommentBox(false);
+      setCurrentComment('');
+      setSelectedText(null);
+      setSelectionCoords(null);
+
+      // Store comment in DynamoDB
+      const dynamoDBClient = new DynamoDBClient({
+        region: process.env.NEXT_PUBLIC_AWS_REGION,
+        credentials: {
+          accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+        },
+      });
+
+      const putCommentParams = {
+        TableName: 'vocalytics-dbms',
+        Item: {
+          CommentID: { S: `comment-${Date.now()}` },
+          TranscriptID: { S: 'YourTranscriptID' }, // Replace with actual TranscriptID
+          Text: { S: currentComment },
+          Timestamp: { S: tempSelectedText },
+          CreationDate: { S: new Date().toISOString() },
+        },
+      };
+      await dynamoDBClient.send(new PutItemCommand(putCommentParams));
+    }
+  };
+
   // Function to handle text selection
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -206,19 +283,8 @@ export default function TranscriptionViewer() {
       setSelectedText(selection.toString());
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      setSelectionCoords({ x: 0, y: rect.top }); // Only set the Y coordinate
+      setSelectionCoords({ x: rect.left, y: rect.top }); // Set both X and Y coordinates
     } else {
-      setSelectedText(null);
-      setSelectionCoords(null);
-    }
-  };
-
-  // Function to handle comment submission
-  const handleCommentSubmit = () => {
-    if (selectedText && currentComment) {
-      setComments({ ...comments, [selectedText]: currentComment });
-      setShowCommentBox(false);
-      setCurrentComment('');
       setSelectedText(null);
       setSelectionCoords(null);
     }
@@ -239,6 +305,31 @@ export default function TranscriptionViewer() {
     };
   }, [showCommentBox]);
 
+  const fetchComments = async () => {
+    const dynamoDBClient = new DynamoDBClient({
+      region: process.env.NEXT_PUBLIC_AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    const getItemParams = {
+      TableName: 'vocalytics-dbms',
+      Key: {
+        TranscriptID: { S: 'YourTranscriptID' }, // Replace with actual TranscriptID
+      },
+    };
+    const data = await dynamoDBClient.send(new GetItemCommand(getItemParams));
+    if (data.Item && data.Item.Comments && data.Item.Comments.S) {
+      setComments(JSON.parse(data.Item.Comments.S));
+    }
+  };
+
+  // Call fetchComments when the component mounts
+  useEffect(() => {
+    fetchComments();
+  }, []);
 
   return (
     <div className="bg-white">
@@ -410,11 +501,6 @@ export default function TranscriptionViewer() {
                     acc.push(
                       <span key={`segment-${index}`} id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
                         {content + ' '}
-                        {comments[content] && (
-                          <span className="comment-bubble" style={{ top: selectionCoords ? selectionCoords.y + window.scrollY : 0 }}>
-                            {comments[content]}
-                          </span>
-                        )}
                       </span>
                     );
                     // Add a new line after the segment if it ends with a period, exclamation mark, or question mark
@@ -435,6 +521,13 @@ export default function TranscriptionViewer() {
             <span>{error}</span>
         </div>
         )}
+
+        {/* Display the comment bubble on the side */}
+        {Object.keys(comments).map((key, index) => (
+          <div key={index} className="comment-bubble" style={{ top: `${index * 50}px`, right: '20px' }}>
+            {comments[key]}
+          </div>
+        ))}
 
         {selectionCoords && (
           <button
