@@ -53,7 +53,7 @@ export default function Home() {
         <div className="flex items-center justify-between max-w-3xl mx-auto p-4">
           <div className="flex-1 pr-8">
             <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-              Your Audio, Insights, Made Easy.
+              Your Audio & Video Insights Made Easy.
             </h2>
             <br></br>
             {/* temp solution - to be replaced */}
