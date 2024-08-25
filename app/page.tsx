@@ -1,14 +1,20 @@
 'use client'
-import { useState } from 'react'
 import Header from './Components/header'
-import Image from 'next/image'
+import "aos/dist/aos.css";
+import { useEffect } from 'react';
+import AOS from 'aos';
 
-const navigation = [
-  { name: 'Sign Up', href: '#' },
-  { name: 'Transcript Viewer', href: '#' },
-]
 
 export default function Home() {
+
+  useEffect(() => {
+    AOS.init({
+
+      duration: 1000, // Set duration to 2000ms (2 seconds)
+
+    });
+  }, []);
+
   return (
     <div className="bg-white">
       <Header />
@@ -27,8 +33,9 @@ export default function Home() {
           />
         </div>
         <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-          <div className="hidden sm:mb-8 sm:flex sm:justify-center"></div>
-          <div className="text-center">
+          <div className="hidden sm:mb-8 sm:flex sm:justify-center">
+          </div>
+          <div className="text-center" data-aos="fade-up">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
               Vocalytics
             </h1>
@@ -53,16 +60,36 @@ export default function Home() {
             <br></br>
             {/* temp solution - to be replaced */}
             <p className="text-gray-600">
-              Effortlessly transcribe your mp3 or mp4 files, highlight key moments, and generate insightful summaries. With Vocalytics, you&apos;ll unlock the full potential of your audio and video content. Our intuitive interface and powerful AI technology make it a breeze to analyze, understand, and share your valuable recordings.
+              Effortlessly transcribe your mp3 or mp4 files, highlight key moments, and generate insightful summaries. With Vocalytics, you'll unlock the full potential of your audio and video content. Our intuitive interface and powerful AI technology make it a breeze to analyze, understand, and share your valuable recordings.
             </p>
           </div>
           <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/2">
-            <Image
+            <img
               src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
               alt="Description of your image"
               className="w-full h-auto rounded-lg shadow-md"
-              width={500}
-              height={300}
+              data-aos="fade-left"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between max-w-3xl mx-auto p-4">
+          <div className="flex-1 pr-8">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+              Your Audio, Insights, Made Easy.
+            </h2>
+            <br></br>
+            {/* temp solution - to be replaced */}
+            <p className="text-gray-600">
+              Effortlessly transcribe your mp3 or mp4 files, highlight key moments, and generate insightful summaries. With Vocalytics, you'll unlock the full potential of your audio and video content. Our intuitive interface and powerful AI technology make it a breeze to analyze, understand, and share your valuable recordings.
+            </p>
+          </div>
+          <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/2" >
+            <img
+              src="https://www.techsmith.com/blog/wp-content/uploads/2023/08/voice-over.png"
+              alt="Description of your image"
+              className="w-full h-auto rounded-lg shadow-md " 
+              data-aos="fade-left"
             />
           </div>
         </div>
@@ -86,14 +113,17 @@ export default function Home() {
             </p>
           </div>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <a
-              href="#"
-              className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Try Vocalytics for free today !
-            </a>
-          </div>
+              <a
+                href="#"
+                className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                Try Vocalytics for free today ! 
+              </a>
+            </div>
+          
         </div>
+
+
 
         <div
           aria-hidden="true"
