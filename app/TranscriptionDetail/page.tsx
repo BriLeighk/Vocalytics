@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DynamoDBClient, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
@@ -8,7 +8,7 @@ import Header from '../Components/header';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export default function TranscriptionDetail() {
+function TranscriptionDetailContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   const [transcription, setTranscription] = useState<any>(null);
@@ -286,5 +286,13 @@ export default function TranscriptionDetail() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TranscriptionDetail() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TranscriptionDetailContent />
+    </Suspense>
   );
 }

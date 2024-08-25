@@ -393,6 +393,10 @@ export default function TranscriptionViewer() {
                 .fixed.inset-0.flex.items-center.justify-center.z-50 {
                     z-index: 9999; /* Increase the z-index if necessary */
                     }
+
+                .comment-highlight {
+                    background-color: lightyellow;
+                }
             `}
         </style>
         {/* Header component to display at the top of the page for navigation */}
@@ -473,7 +477,8 @@ export default function TranscriptionViewer() {
                     // Replace the new lines with spaces
                     const content = segment.alternatives[0].content.replace(/\n/g, ' ');
                     const startTime = parseFloat(segment.start_time);
-                    // Add timestamps only at the beginning or end of a sentence
+                    const hasComment = comments[content];
+
                     if (index === 0 || index % 106 === 0) {
                       if (!isNaN(startTime)) {
                         acc.push(
@@ -500,7 +505,7 @@ export default function TranscriptionViewer() {
                     }
                     // Add the segment to the transcription
                     acc.push(
-                      <span key={`segment-${index}`} id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
+                      <span key={`segment-${index}`} id={`segment-${index}`} className={`${highlightedSegment === index ? 'highlight' : ''} ${hasComment ? 'comment-highlight' : ''}`}>
                         {content + ' '}
                       </span>
                     );
@@ -508,6 +513,15 @@ export default function TranscriptionViewer() {
                     if (content.endsWith('.') || content.endsWith('!') || content.endsWith('?')) {
                       acc.push(<br key={`br-${index}`} />);
                     }
+
+                    if (hasComment) {
+                      acc.push(
+                        <div key={`comment-bubble-${index}`} className="comment-bubble" style={{ top: `${index * 50}px`, right: '20px' }}>
+                          {comments[content]}
+                        </div>
+                      );
+                    }
+
                     return acc;
                   }, [])}
                 </div>
@@ -522,13 +536,6 @@ export default function TranscriptionViewer() {
             <span>{error}</span>
         </div>
         )}
-
-        {/* Display the comment bubble on the side */}
-        {Object.keys(comments).map((key, index) => (
-          <div key={index} className="comment-bubble" style={{ top: `${index * 50}px`, right: '20px' }}>
-            {comments[key]}
-          </div>
-        ))}
 
         {selectionCoords && (
           <button
