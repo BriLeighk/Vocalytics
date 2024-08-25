@@ -5,6 +5,7 @@ import { S3Client, PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/clie
 import { TranscribeClient, StartTranscriptionJobCommand, StartTranscriptionJobCommandInput, GetTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
 import Header from '../Components/header';
 import dotenv from 'dotenv'; // Load environment variables from .env file
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 dotenv.config();
 
 export default function TranscriptionViewer() {
@@ -17,6 +18,11 @@ export default function TranscriptionViewer() {
   const [isError, setIsError] = useState<boolean>(false); // The error message of the transcription
   const [s3Url, setS3Url] = useState<string | null>(null); // The url of the s3 bucket
   const [highlightedSegment, setHighlightedSegment] = useState<number | null>(null); // The currently highlighted segment
+  const [selectedText, setSelectedText] = useState<string | null>(null); // The selected text segment
+  const [comments, setComments] = useState<{ [key: string]: string }>({}); // Comments for text segments
+  const [showCommentBox, setShowCommentBox] = useState<boolean>(false); // Show or hide the comment box
+  const [currentComment, setCurrentComment] = useState<string>(''); // Current comment text
+  const [selectionCoords, setSelectionCoords] = useState<{ x: number, y: number } | null>(null); // Coordinates of the selected text
 
   // Function to handle when the user uploads a file
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -161,24 +167,31 @@ export default function TranscriptionViewer() {
     return date.toISOString().substr(11, 8);
   };
 
+  // Function to handle the time update of the media element
   useEffect(() => {
+    // Get the media element
     const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
     if (mediaElement) {
       const handleTimeUpdate = () => {
+        // Get the current time
         const currentTime = mediaElement.currentTime;
+        // find the segment that the current time is in
         const segment = transcriptionSegments.find((seg, idx) => {
-          const nextSeg = transcriptionSegments[idx + 1];
+          const nextSeg = transcriptionSegments[idx + 1]; // Get the next segment
           return parseFloat(seg.start_time) <= currentTime && (!nextSeg || parseFloat(nextSeg.start_time) > currentTime);
         });
+        // If the segment is found, set the highlighted segment to the index of the segment
         if (segment) {
           const segmentIndex = transcriptionSegments.indexOf(segment);
           setHighlightedSegment(segmentIndex);
           const segmentElement = document.getElementById(`segment-${segmentIndex}`);
           if (segmentElement) {
-            segmentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Scroll the segment into view
+            segmentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
         }
       };
+      // Add the event listener to the media element
       mediaElement.addEventListener('timeupdate', handleTimeUpdate);
       return () => {
         mediaElement.removeEventListener('timeupdate', handleTimeUpdate);
@@ -186,8 +199,50 @@ export default function TranscriptionViewer() {
     }
   }, [transcriptionSegments]);
 
+  // Function to handle text selection
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      setSelectedText(selection.toString());
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      setSelectionCoords({ x: 0, y: rect.top }); // Only set the Y coordinate
+    } else {
+      setSelectedText(null);
+      setSelectionCoords(null);
+    }
+  };
+
+  // Function to handle comment submission
+  const handleCommentSubmit = () => {
+    if (selectedText && currentComment) {
+      setComments({ ...comments, [selectedText]: currentComment });
+      setShowCommentBox(false);
+      setCurrentComment('');
+      setSelectedText(null);
+      setSelectionCoords(null);
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseUp = (event: MouseEvent) => {
+      if (showCommentBox) {
+        event.preventDefault();
+      } else {
+        handleTextSelection();
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [showCommentBox]);
+
+
   return (
     <div className="bg-white">
+        
         {/* Fade in and out animation for the error message */}
         <style jsx>
             {`
@@ -205,6 +260,47 @@ export default function TranscriptionViewer() {
                 .highlight {
                     background-color: yellow;
                 }
+
+                .timestamp {
+                    color: #60a5fa; /* blue-400 */
+                }
+
+                .comment-bubble {
+                    position: absolute;
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    padding: 5px;
+                    border-radius: 5px;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                }
+
+                .comment-box {
+                    position: fixed;
+                    right: 20px;
+                    top: 20px;
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                    border-radius: 5px;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                }
+
+                .message-icon {
+                    position: absolute;
+                    cursor: pointer;
+                    background-color: #60a5fa; /* blue-400 */
+                    color: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .fixed.inset-0.flex.items-center.justify-center.z-50 {
+                    z-index: 9999; /* Increase the z-index if necessary */
+                    }
             `}
         </style>
         {/* Header component to display at the top of the page for navigation */}
@@ -222,7 +318,7 @@ export default function TranscriptionViewer() {
             className="srelative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
           />
         </div>
-        <div className="mx-auto max-w-2xl py-20">
+        <div className="relative mx-auto max-w-2xl py-20">
           <div className="hidden sm:mb-8 flex justify-center">
           </div>
           <div className="text-center">
@@ -264,7 +360,7 @@ export default function TranscriptionViewer() {
                 
                 {/* Embed the audio or video file */}
                 {s3Url && (
-                  <div className="mt-4">
+                  <div className="mt-4" id="media-container">
                     {s3Url.endsWith('.mp3') ? (
                       <audio id="media" controls>
                         <source src={s3Url} type="audio/mpeg" />
@@ -280,30 +376,50 @@ export default function TranscriptionViewer() {
                 )}
 
                 {/* Display the transcription text */}
-                <div className="overflow-y-auto max-h-96 w-full whitespace-normal border-2 border-blue-500 rounded shadow-lg shadow-gray-600 mt-4">
+                <div className="relative h-auto w-full whitespace-normal border-2 border-blue-500 rounded shadow-lg shadow-gray-600 mt-4">
                   {transcriptionSegments.reduce((acc, segment, index) => {
                     // Replace the new lines with spaces
                     const content = segment.alternatives[0].content.replace(/\n/g, ' ');
-                    // display time stamp at 60 second intervals
-                    if (index === 0 || (index > 0 && parseFloat(segment.start_time) - parseFloat(transcriptionSegments[index - 1].start_time) >= 60)) {
-                      acc.push(
-                        <a href={`#segment-${index}`} onClick={() => {
-                          const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
-                          if (mediaElement) {
-                            mediaElement.currentTime = parseFloat(segment.start_time);
-                          }
-                        }}>
-                          [{isNaN(parseFloat(segment.start_time)) ? 'Invalid time' : formatTime(parseFloat(segment.start_time))}]
-                        </a>
-                      );
+                    const startTime = parseFloat(segment.start_time);
+                    // Add timestamps only at the beginning or end of a sentence
+                    if (index === 0 || index % 106 === 0) {
+                      if (!isNaN(startTime)) {
+                        acc.push(
+                          <a
+                            key={`timestamp-${index}`}
+                            href={`#segment-${index}`}
+                            // When the timestamp is clicked, the media element will scroll to the timestamp
+                            onClick={() => {
+                              const mediaElement = document.getElementById('media') as HTMLMediaElement | null;
+                              if (mediaElement) {
+                                mediaElement.currentTime = startTime;
+                                const mediaContainer = document.getElementById('media-container');
+                                if (mediaContainer) {
+                                  mediaContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              }
+                            }}
+                            className="timestamp"
+                          >
+                            [{formatTime(startTime)}]
+                          </a>
+                        );
+                      }
                     }
+                    // Add the segment to the transcription
                     acc.push(
-                      <span id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
+                      <span key={`segment-${index}`} id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
                         {content + ' '}
+                        {comments[content] && (
+                          <span className="comment-bubble" style={{ top: selectionCoords ? selectionCoords.y + window.scrollY : 0 }}>
+                            {comments[content]}
+                          </span>
+                        )}
                       </span>
                     );
+                    // Add a new line after the segment if it ends with a period, exclamation mark, or question mark
                     if (content.endsWith('.') || content.endsWith('!') || content.endsWith('?')) {
-                      acc.push(<br />);
+                      acc.push(<br key={`br-${index}`} />);
                     }
                     return acc;
                   }, [])}
@@ -320,6 +436,39 @@ export default function TranscriptionViewer() {
         </div>
         )}
 
+        {selectionCoords && (
+          <button
+            className="message-icon"
+            style={{ top: selectionCoords.y + window.scrollY, right: '20px' }}
+            onClick={() => {
+                console.log('Chat bubble clicked');
+                setShowCommentBox(true);
+              }}
+          >
+            <ChatBubbleLeftRightIcon className="w-6 h-6" />
+          </button>
+        )}
+
+        {showCommentBox && (
+                <div className="fixed inset-0 flex items-center justify-center z-50">
+                    <div className="bg-white p-4 rounded shadow-lg w-1/3">
+                    <textarea
+                        value={currentComment}
+                        onChange={(e) => setCurrentComment(e.target.value)}
+                        placeholder="Add your comment"
+                        className="w-full h-24 p-2 border rounded"
+                    />
+                    <div className="flex justify-end mt-2">
+                        <button onClick={handleCommentSubmit} className="px-4 py-2 bg-blue-500 text-white rounded">
+                        Submit
+                        </button>
+                        <button onClick={() => setShowCommentBox(false)} className="ml-2 px-4 py-2 bg-gray-500 text-white rounded">
+                        Cancel
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                )}
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]"

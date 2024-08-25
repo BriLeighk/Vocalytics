@@ -1,11 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon, HomeModernIcon } from '@heroicons/react/24/outline'
 
 const navigation = [
   { name: 'Sign Up', href: '#' },
-  { name: 'Transcript Viewer', href: '#' },
+  { name: 'Transcript Viewer', href: '/TranscriptionViewer' },
 ]
 
 export default function Header() {
@@ -16,13 +16,9 @@ export default function Header() {
       <header className="absolute inset-x-0 top-0 z-50">
         <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
           <div className="flex lg:flex-1">
-            <a href="#" className="-m-1.5 p-1.5">
+            <a href="/" className="-m-1.5 p-1.5">
               <span className="sr-only">Vocalytics</span>
-              <img
-                alt=""
-                src="" /* IF TIME CREATE LOGO */
-                className="h-8 w-auto"
-              />
+              <HomeModernIcon className="h-6 w-auto text-gray-900" aria-hidden="true" />
             </a>
           </div>
           <div className="flex lg:hidden">
@@ -52,13 +48,9 @@ export default function Header() {
           <div className="fixed inset-0 z-50" />
           <DialogPanel className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
             <div className="flex items-center justify-between">
-              <a href="#" className="-m-1.5 p-1.5">
+              <a href="/" className="-m-1.5 p-1.5">
                 <span className="sr-only">Vocalytics</span>
-                <img
-                  alt=""
-                  src="" /* IF TIME CREATE LOGO */
-                  className="h-8 w-auto"
-                />
+                <HomeModernIcon className="h-6 w-auto text-gray-900" aria-hidden="true" />
               </a>
               <button
                 type="button"
