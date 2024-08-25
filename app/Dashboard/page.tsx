@@ -4,7 +4,8 @@ import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import React, { useEffect, useState } from 'react';
 import userpool from '../../userpool';
 import { logout } from '../Services/authenticate';
-import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, QueryCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { HomeModernIcon } from '@heroicons/react/24/outline';
 
 interface User {
@@ -15,6 +16,7 @@ interface NavigationItem {
   name: string;
   href: string;
   current: boolean;
+  onClick?: () => void;
 }
 
 interface UserNavigationItem {
@@ -38,11 +40,13 @@ function classNames(...classes: string[]) {
 const Dashboard: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [transcriptions, setTranscriptions] = useState<any[]>([]);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const user = userpool.getCurrentUser();
     if (user) {
-      user.getSession((err: any) => { // Removed 'session' parameter
+      user.getSession((err: any) => {
         if (err) {
           console.error(err);
           return;
@@ -77,7 +81,7 @@ const Dashboard: React.FC = () => {
 
     const queryParams = {
       TableName: 'vocalytics-dbms',
-      IndexName: 'Username-index', // Ensure this index exists
+      IndexName: 'Username-index',
       KeyConditionExpression: '#username = :username',
       ExpressionAttributeNames: {
         '#username': 'Username',
@@ -88,23 +92,58 @@ const Dashboard: React.FC = () => {
     };
 
     try {
-      console.log('Querying DynamoDB with params:', JSON.stringify(queryParams, null, 2));
       const data = await dynamoDBClient.send(new QueryCommand(queryParams));
-      console.log('DynamoDB query result:', data);
       if (data.Items) {
         setTranscriptions(data.Items);
-      } else {
-        console.log('No items found for the given username.');
       }
     } catch (error) {
       console.error('Error fetching transcriptions:', error);
-      if (error instanceof Error) {
-        if (error.name === 'ValidationException' && error.message.includes('The table does not have the specified index')) {
-          console.error('The specified index does not exist. Please ensure the index is created in DynamoDB.');
-        } else {
-          console.error('DynamoDB error:', error.message);
-        }
-      }
+    }
+  };
+
+  const deleteTranscription = async (transcriptID: string) => {
+    const dynamoDBClient = new DynamoDBClient({
+      region: process.env.NEXT_PUBLIC_AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    const s3Client = new S3Client({
+      region: process.env.NEXT_PUBLIC_AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    const deleteParams = {
+      TableName: 'vocalytics-dbms',
+      Key: {
+        'TranscriptID': { S: transcriptID },
+      },
+    };
+
+    const s3DeleteParams = {
+      Bucket: process.env.NEXT_PUBLIC_S3_BUCKET_NAME!,
+      Key: `transcriptions/${transcriptID}.json`,
+    };
+
+    try {
+      await dynamoDBClient.send(new DeleteItemCommand(deleteParams));
+      await s3Client.send(new DeleteObjectCommand(s3DeleteParams));
+      
+      setTranscriptions(prevTranscriptions => 
+        prevTranscriptions.filter(t => t.TranscriptID.S !== transcriptID)
+      );
+
+      // Set success message
+      setSuccessMessage('Transcription deleted successfully!');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000); // Hide after 3 seconds
+    } catch (error) {
+      console.error('Error deleting transcription:', error);
     }
   };
 
@@ -140,7 +179,20 @@ const Dashboard: React.FC = () => {
                         {item.name}
                       </a>
                     ))}
+                    {userNavigation.map((item) => (
+                      <a
+                        key={item.name}
+                        href={item.href}
+                        className={classNames(
+                          'text-gray-800 hover:bg-gray-100 hover:text-gray-900',
+                          'rounded-md px-3 py-2 text-sm font-medium',
+                        )}
+                      >
+                        {item.name}
+                      </a>
+                    ))}
                   </div>
+
                 </div>
               </div>
               <div className="hidden md:block">
@@ -231,8 +283,15 @@ const Dashboard: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 text-center">Dashboard</h1>
           </div>
         </header>
+
+        {showSuccessMessage && (
+          <div role="alert" className="alert alert-success fade-in-out fixed bottom-4 right-4 w-auto max-h-[50px] text-center align-middle">
+            <span>{successMessage}</span>
+          </div>
+        )}
+
         <main>
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8s h-auto">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 h-auto">
             <h2 className="text-2xl text-gray-900 font-bold mt-10">Your Transcriptions</h2>
             <div className="shadow overflow-hidden sm:rounded-lg">
               <ul className="divide-y divide-gray-200">
@@ -243,6 +302,12 @@ const Dashboard: React.FC = () => {
                         {transcription.TranscriptID.S}
                       </a>
                       <p className="text-sm text-gray-500">{new Date(transcription.CreationDate.S).toLocaleString()}</p>
+                      <button
+                        onClick={() => deleteTranscription(transcription.TranscriptID.S)}
+                        className="ml-4 bg-red-500 text-white px-3 py-1 rounded"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -251,6 +316,18 @@ const Dashboard: React.FC = () => {
           </div>
         </main>
       </div>
+
+      <style jsx>{`
+        .fade-in-out {
+          animation: fadeInOut 3s forwards;
+        }
+        @keyframes fadeInOut {
+          0% { opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
     </>
   );
 }
