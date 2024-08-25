@@ -56,19 +56,19 @@ export default function TranscriptionViewer() {
       }, 3000); // Hide error after 3 seconds
       return;
     }
-
+  
     // checks if the file is of mp3 or mp4 format. Returns a popup error message if not
     if (file && (file.type !== 'audio/mpeg' && file.type !== 'video/mp4')) {
-        setIsError(true);
-        setError('Please upload a valid mp3 or mp4 file.');
-        setTimeout(() => {
-          setIsError(false);
-          setError('');
-        }, 3000); // Hide error after 3 seconds
-        return;
-      }
-
-    //TODO: if the file is not selected, return a popup error message
+      setIsError(true);
+      setError('Please upload a valid mp3 or mp4 file.');
+      setTimeout(() => {
+        setIsError(false);
+        setError('');
+      }, 3000); // Hide error after 3 seconds
+      return;
+    }
+  
+    // if the file is not selected, return a popup error message
     if (!file) {
       setIsError(true);
       setError('Please select a file.');
@@ -78,10 +78,10 @@ export default function TranscriptionViewer() {
       }, 3000); // Hide error after 3 seconds
       return;
     }
-
+  
     // Displays text while the file is being uploaded
     setTranscriptionStatus('Uploading file...');
-
+  
     // creates an s3 client to upload the file to the s3 bucket
     const s3Client = new S3Client({
       region: process.env.NEXT_PUBLIC_AWS_REGION,
@@ -90,28 +90,28 @@ export default function TranscriptionViewer() {
         secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
       },
     });
-
+  
     // creates the parameters for the upload command
     const uploadParams: PutObjectCommandInput = {
       Bucket: 'vocalytics-bucket', // name of the s3 bucket we're using
       Key: file.name, // name of the file in the s3 bucket
       Body: file, // the file itself
     };
-
+  
     try {
       // uploads the file to the s3 bucket
       await s3Client.send(new PutObjectCommand(uploadParams));
-
+  
       // Set the S3 URL
       setS3Url(`https://${uploadParams.Bucket}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${uploadParams.Key}`);
-
+  
       // Clear the file input
       setFile(null);
       (document.querySelector('input[type="file"]') as HTMLInputElement).value = '';
-
+  
       // Tells the user the file was successfully uploaded
       setTranscriptionStatus('File uploaded successfully.');
-
+  
       // creates a transcribe client to start the transcription job with AWS Transcribe API
       const transcribeClient = new TranscribeClient({
         region: process.env.NEXT_PUBLIC_AWS_REGION,
@@ -120,7 +120,7 @@ export default function TranscriptionViewer() {
           secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
         },
       });
-
+  
       // creates the parameters to start transcription job command
       const params: StartTranscriptionJobCommandInput = {
         TranscriptionJobName: `transcription-${Date.now()}`,
@@ -130,10 +130,10 @@ export default function TranscriptionViewer() {
         },
         OutputBucketName: 'vocalytics-bucket', // Ensure this bucket is in the same region as the Transcribe service
       };
-
+  
       // starts the transcription process
       await transcribeClient.send(new StartTranscriptionJobCommand(params));
-    
+  
       // checks the status of the transcription job smoothly
       const checkStatus = setInterval(async () => {
         const data = await transcribeClient.send(new GetTranscriptionJobCommand({ TranscriptionJobName: params.TranscriptionJobName }));
@@ -142,58 +142,59 @@ export default function TranscriptionViewer() {
           if (status === 'COMPLETED') {
             // stops the interval of checking the status of the transcription job
             clearInterval(checkStatus);
-          
-          // set progress to false to mark completion
-          setProgress(false);
-          setTranscriptionStatus('Completed');
-          
-          // Fetch and display the transcription
-          const transcriptionUrl = data.TranscriptionJob?.Transcript?.TranscriptFileUri;
-          if (transcriptionUrl) {
-            try {
-              const response = await fetch(transcriptionUrl);
-              const transcriptionData = await response.json();
-
-              setTranscriptionText(transcriptionData.results.transcripts[0].transcript);
-              setTranscriptionSegments(transcriptionData.results.items);
-
-              // Store transcription in DynamoDB
-              const dynamoDBClient = new DynamoDBClient({
-                region: process.env.NEXT_PUBLIC_AWS_REGION,
-                credentials: {
-                  accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
-                  secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
-                },
-              });
-
-              const putItemParams = {
-                TableName: 'vocalytics-dbms',
-                Item: {
-                  TranscriptID: { S: params.TranscriptionJobName },
-                  TranscriptText: { S: transcriptionData.results.transcripts[0].transcript },
-                  Segments: { S: JSON.stringify(transcriptionData.results.items) },
-                  CreationDate: { S: new Date().toISOString() },
-                  Username: { S: username! }, // Store the username
-                } as Record<string, AttributeValue>,
-              };
-              await dynamoDBClient.send(new PutItemCommand(putItemParams));
-            } catch (error) {
-              console.error('Error storing transcription:', error);
-              setTranscriptionStatus('Error storing transcription.');
+  
+            // set progress to false to mark completion
+            setProgress(false);
+            setTranscriptionStatus('Completed');
+  
+            // Fetch and display the transcription
+            const transcriptionUrl = data.TranscriptionJob?.Transcript?.TranscriptFileUri;
+            if (transcriptionUrl) {
+              try {
+                const response = await fetch(transcriptionUrl);
+                const transcriptionData = await response.json();
+  
+                setTranscriptionText(transcriptionData.results.transcripts[0].transcript);
+                setTranscriptionSegments(transcriptionData.results.items);
+  
+                // Store transcription in DynamoDB
+                const dynamoDBClient = new DynamoDBClient({
+                  region: process.env.NEXT_PUBLIC_AWS_REGION,
+                  credentials: {
+                    accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID!,
+                    secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY!,
+                  },
+                });
+  
+                const putItemParams = {
+                  TableName: 'vocalytics-dbms',
+                  Item: {
+                    TranscriptID: { S: params.TranscriptionJobName },
+                    TranscriptText: { S: transcriptionData.results.transcripts[0].transcript },
+                    Segments: { S: JSON.stringify(transcriptionData.results.items) },
+                    CreationDate: { S: new Date().toISOString() },
+                    Username: { S: username! }, // Store the username
+                    mediaID: { S: file.name },
+                  } as Record<string, AttributeValue>,
+                };
+                await dynamoDBClient.send(new PutItemCommand(putItemParams));
+              } catch (error) {
+                console.error('Error storing transcription:', error);
+                setTranscriptionStatus('Error storing transcription.');
+              }
+            } else {
+              setTranscriptionStatus('Transcription URL is unavailable.');
             }
+          } else if (data.TranscriptionJob && data.TranscriptionJob.TranscriptionJobStatus === 'FAILED') {
+            clearInterval(checkStatus);
+            setTranscriptionStatus('Transcription failed.');
           } else {
-            setTranscriptionStatus('Transcription URL is unavailable.');
-          }
-        } else if (data.TranscriptionJob && data.TranscriptionJob.TranscriptionJobStatus === 'FAILED') {
-          clearInterval(checkStatus);
-          setTranscriptionStatus('Transcription failed.');
-        } else {
-          // Update progress based on the status
-          if (status) {
-            setProgress(true);
+            // Update progress based on the status
+            if (status) {
+              setProgress(true);
+            }
           }
         }
-       }
       }, 1000); // Checks every second (can change to check quicker if needed)
     } catch (error: any) {
       if (error.name === 'NetworkingError') {
@@ -392,6 +393,10 @@ export default function TranscriptionViewer() {
                 .fixed.inset-0.flex.items-center.justify-center.z-50 {
                     z-index: 9999; /* Increase the z-index if necessary */
                     }
+
+                .comment-highlight {
+                    background-color: lightyellow;
+                }
             `}
         </style>
         {/* Header component to display at the top of the page for navigation */}
@@ -472,7 +477,8 @@ export default function TranscriptionViewer() {
                     // Replace the new lines with spaces
                     const content = segment.alternatives[0].content.replace(/\n/g, ' ');
                     const startTime = parseFloat(segment.start_time);
-                    // Add timestamps only at the beginning or end of a sentence
+                    const hasComment = comments[content];
+
                     if (index === 0 || index % 106 === 0) {
                       if (!isNaN(startTime)) {
                         acc.push(
@@ -499,7 +505,7 @@ export default function TranscriptionViewer() {
                     }
                     // Add the segment to the transcription
                     acc.push(
-                      <span key={`segment-${index}`} id={`segment-${index}`} className={highlightedSegment === index ? 'highlight' : ''}>
+                      <span key={`segment-${index}`} id={`segment-${index}`} className={`${highlightedSegment === index ? 'highlight' : ''} ${hasComment ? 'comment-highlight' : ''}`}>
                         {content + ' '}
                       </span>
                     );
@@ -507,6 +513,15 @@ export default function TranscriptionViewer() {
                     if (content.endsWith('.') || content.endsWith('!') || content.endsWith('?')) {
                       acc.push(<br key={`br-${index}`} />);
                     }
+
+                    if (hasComment) {
+                      acc.push(
+                        <div key={`comment-bubble-${index}`} className="comment-bubble" style={{ top: `${index * 50}px`, right: '20px' }}>
+                          {comments[content]}
+                        </div>
+                      );
+                    }
+
                     return acc;
                   }, [])}
                 </div>
@@ -521,13 +536,6 @@ export default function TranscriptionViewer() {
             <span>{error}</span>
         </div>
         )}
-
-        {/* Display the comment bubble on the side */}
-        {Object.keys(comments).map((key, index) => (
-          <div key={index} className="comment-bubble" style={{ top: `${index * 50}px`, right: '20px' }}>
-            {comments[key]}
-          </div>
-        ))}
 
         {selectionCoords && (
           <button
