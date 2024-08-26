@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Vocalytics
+NextJS app hosted on vercel.
+Project for Headstarters' Hiring Hackathon, target track [Rilla](https://www.rilla.com/), aiming to create an audio transcription software that allows users to upload audio or video files to create a transcript for commenting in real time.
 
-## Getting Started
+##Tech Stack
+- **Frontend**: **React** with **Typescript**
+- **UI Libraries**: [**Tailwind CSS**](https://tailwindcss.com/), [**Material-UI**](https://mui.com/material-ui/), & [**DaisyUI**](https://daisyui.com/) for styling
+- **Backend**: **Node.js** with **AWS Lambda**:
+  - Handle audio/video file uploads and trigger transcription
+  - Process the uploaded file using AWS Transcribe and store results in DynamoDB
+  - CRUD Operations on DynamoDB
+  - Function to call SageMaker or GPT API for generating transcript summaries
+  - Express API (for RESTful endpoint to trigger Lambda functions)
+- **DBMS**: **DynamoDB** and **S3**
+  - Store comments with references to specific timestamps using DynamoDB + store metadata like transcript ID, creation date, and file links.
+  - S3 for file storage (uploaded audio/video files + attachments linked to comments, transcription)
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Implemented
+- [x] **Transcription**: Allows user to upload media file to S3, convert to transcription through AWS transcribe (stores PK references in DynamoDB), and follow along as the media file plays (highlights text and auto scrolls).
+- [x] **User Auth**: Enabled account creation and logging in with account verification through AWS Cognito.
+- [x] **Dashboard**: Auto navigates to dashboard on log in, lists all user-generated transcripts with link to open transcription page.
+- [ ] **Commenting**: Allow users to highlight parts of the transcript and add comments, displayed as annotations linked to the specific transcript section.
+- [ ] **Editing**: Edit/modify generated transcription, pushing updates to S3.
+- [ ] **Summary Generator**: Allow users to generate a summary of transcript and associated comments using AWS SageMaker (or GPT API with llama 3.1)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Bonus Features
+- [ ] **Logo Creation**: Create a logo in header component
+- [ ] **Attachment Feature**: Option to attach files to comments?
+- [ ] **Shared Notes Section**: shared space for users to collaboratively annotate and discuss the transcript.
+- [ ] **Real-Time Collaboration**: Enable multiple users to work on the same transcript simultaneously.
+- [ ] **Search & Filter**: Options to search transcripts by keywords, date, or tags.
+- [ ] **Invite**: Allow users to invite others to comment/collaborate
+- [ ] **Internal Users**: Notify with "accept invitation" request
+- [ ] **External Users**: Email with link to register & accept invitation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
