@@ -14,6 +14,9 @@ Project for Headstarters' Hiring Hackathon, target track [Rilla](https://www.ril
 - **DBMS**: **DynamoDB** and **S3**
   - Store comments with references to specific timestamps using DynamoDB + store metadata like transcript ID, creation date, and file links.
   - S3 for file storage (uploaded audio/video files + attachments linked to comments, transcription)
+ 
+  ### NOTE:
+  - AWS Services are now disconnected to prevent further incuring charges
 
 
 ## Implemented
